@@ -9,7 +9,7 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: '/',
     display: 'standalone',
     background_color: '#ffffff',
-    theme_color: '#0a0a0a',
+    theme_color: '#00bcd4',
     orientation: 'portrait-primary',
     scope: '/',
     icons: [
@@ -25,21 +25,13 @@ export default function manifest(): MetadataRoute.Manifest {
         type: 'image/png',
         purpose: 'any',
       },
+      {
+        src: '/tripflip_logo.png',
+        sizes: '1024x1024',
+        type: 'image/png',
+        purpose: 'any',
+      },
     ],
     categories: ['travel', 'lifestyle', 'productivity'],
-    screenshots: [
-      {
-        src: '/screenshots/desktop.png',
-        sizes: '1280x720',
-        type: 'image/png',
-        form_factor: 'wide',
-      },
-      {
-        src: '/screenshots/mobile.png',
-        sizes: '750x1334',
-        type: 'image/png',
-        form_factor: 'narrow',
-      },
-    ],
   }
 }

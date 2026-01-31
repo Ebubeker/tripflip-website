@@ -9,13 +9,13 @@ import { AirplaneTakeoff, MapPinLine, Calendar } from '@phosphor-icons/react'
 
 export function HeroSection() {
   return (
-    <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-gradient-to-b from-[#f5f1eb] via-[#faf8f5] to-white">
+    <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-gradient-to-b from-sky-50 via-white to-white">
       <FloatingPlanes />
 
       {/* Animated background gradient blobs */}
       <div className="absolute inset-0 -z-10">
         <motion.div
-          className="absolute top-10 left-1/4 h-[600px] w-[600px] rounded-full bg-primary/10 blur-3xl"
+          className="absolute top-10 left-1/4 h-[600px] w-[600px] rounded-full bg-sky-400/10 blur-3xl"
           animate={{
             x: [0, 50, 0],
             y: [0, 30, 0],
@@ -24,7 +24,7 @@ export function HeroSection() {
           transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
         />
         <motion.div
-          className="absolute bottom-10 right-1/4 h-[500px] w-[500px] rounded-full bg-[#e8d5c4]/40 blur-3xl"
+          className="absolute bottom-10 right-1/4 h-[500px] w-[500px] rounded-full bg-sky-300/15 blur-3xl"
           animate={{
             x: [0, -40, 0],
             y: [0, -20, 0],
@@ -33,7 +33,7 @@ export function HeroSection() {
           transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
         />
         <motion.div
-          className="absolute top-1/3 right-1/3 h-[300px] w-[300px] rounded-full bg-[#d4c4b0]/30 blur-3xl"
+          className="absolute top-1/3 right-1/3 h-[300px] w-[300px] rounded-full bg-orange-200/20 blur-3xl"
           animate={{
             x: [0, 30, 0],
             y: [0, -40, 0],
@@ -109,15 +109,15 @@ export function HeroSection() {
           transition={{ delay: 0.3 }}
           className="flex flex-wrap items-center justify-center gap-3 mb-10"
         >
-          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 border border-[#e8e4dd] text-sm text-gray-700 shadow-sm">
+          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 border border-slate-200 text-sm text-gray-700 shadow-sm">
             <AirplaneTakeoff weight="duotone" className="w-4 h-4 text-primary" />
             Flight Search
           </span>
-          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 border border-[#e8e4dd] text-sm text-gray-700 shadow-sm">
+          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 border border-slate-200 text-sm text-gray-700 shadow-sm">
             <MapPinLine weight="duotone" className="w-4 h-4 text-primary" />
             Hotel Booking
           </span>
-          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 border border-[#e8e4dd] text-sm text-gray-700 shadow-sm">
+          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/80 border border-slate-200 text-sm text-gray-700 shadow-sm">
             <Calendar weight="duotone" className="w-4 h-4 text-primary" />
             Smart Itinerary
           </span>
@@ -130,13 +130,13 @@ export function HeroSection() {
           transition={{ duration: 0.6, delay: 0.4 }}
           className="flex flex-col sm:flex-row gap-4 justify-center"
         >
-          <Button asChild size="lg" className="text-lg px-10 py-7 rounded-xl shadow-xl shadow-primary/30 hover:shadow-2xl hover:shadow-primary/40 transition-all duration-300 hover:-translate-y-0.5">
+          <Button asChild size="lg" className="text-lg px-10 py-7 rounded-xl bg-orange-500 hover:bg-orange-600 text-white shadow-xl shadow-orange-500/30 hover:shadow-2xl hover:shadow-orange-500/40 transition-all duration-300 hover:-translate-y-0.5">
             <Link href="/plan">
               Start Planning Free
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
           </Button>
-          <Button asChild variant="ghost" size="lg" className="text-lg px-8 py-7 rounded-xl bg-white/80 hover:bg-white text-primary border-2 border-primary/20 hover:border-primary/40 transition-all">
+          <Button asChild variant="ghost" size="lg" className="text-lg px-8 py-7 rounded-xl bg-white/80 hover:bg-white text-sky-600 border-2 border-sky-200 hover:border-sky-400 transition-all">
             <Link href="#how-it-works">
               See How It Works
             </Link>

@@ -5,6 +5,7 @@ import Whop from '@whop/sdk'
 
 const whop = new Whop({
   apiKey: process.env.WHOP_API_KEY!,
+  webhookSecret: process.env.WHOP_WEBHOOK_SECRET!,
   ...(process.env.NODE_ENV !== 'production' && {
     baseURL: 'https://sandbox-api.whop.com/api/v1',
   }),

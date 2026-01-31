@@ -5,7 +5,7 @@ import { Mail, Twitter, MessageCircle } from 'lucide-react'
 
 export function ContactSection() {
   return (
-    <section id="contact" className="py-40 bg-[#f5f1eb]">
+    <section id="contact" className="py-40 bg-slate-50">
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -24,7 +24,7 @@ export function ContactSection() {
             <motion.a
               href="mailto:hello@tripflip.app"
               whileHover={{ y: -5 }}
-              className="flex flex-col items-center p-6 rounded-2xl bg-white border-2 border-[#e8e4dd] hover:border-primary/30 transition-all"
+              className="flex flex-col items-center p-6 rounded-2xl bg-white border-2 border-slate-200 hover:border-primary/30 transition-all"
             >
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
                 <Mail className="w-6 h-6 text-primary" />
@@ -38,7 +38,7 @@ export function ContactSection() {
               target="_blank"
               rel="noopener noreferrer"
               whileHover={{ y: -5 }}
-              className="flex flex-col items-center p-6 rounded-2xl bg-white border-2 border-[#e8e4dd] hover:border-primary/30 transition-all"
+              className="flex flex-col items-center p-6 rounded-2xl bg-white border-2 border-slate-200 hover:border-primary/30 transition-all"
             >
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
                 <Twitter className="w-6 h-6 text-primary" />
@@ -50,7 +50,7 @@ export function ContactSection() {
             <motion.a
               href="#"
               whileHover={{ y: -5 }}
-              className="flex flex-col items-center p-6 rounded-2xl bg-white border-2 border-[#e8e4dd] hover:border-primary/30 transition-all"
+              className="flex flex-col items-center p-6 rounded-2xl bg-white border-2 border-slate-200 hover:border-primary/30 transition-all"
             >
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
                 <MessageCircle className="w-6 h-6 text-primary" />

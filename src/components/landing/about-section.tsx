@@ -108,7 +108,7 @@ export function AboutSection() {
                 {/* Background decoration */}
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-primary/10 rounded-3xl transform rotate-3" />
 
-                <div className="relative bg-white rounded-3xl p-8 shadow-xl border border-[#e8e4dd]">
+                <div className="relative bg-white rounded-3xl p-8 shadow-xl border border-slate-200">
                   <div className="text-center mb-6">
                     <span className="text-sm font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">
                       How it works
@@ -125,7 +125,7 @@ export function AboutSection() {
                           whileInView={{ opacity: 1, x: 0 }}
                           viewport={{ once: true }}
                           transition={{ delay: 0.2 + i * 0.1 }}
-                          className="flex items-center gap-4 p-4 rounded-xl bg-[#f5f1eb]/50 border border-[#e8e4dd]"
+                          className="flex items-center gap-4 p-4 rounded-xl bg-slate-50/50 border border-slate-200"
                         >
                           <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                             <IconComponent weight="duotone" className="w-6 h-6 text-primary" />
@@ -181,7 +181,7 @@ export function AboutSection() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.1 }}
-                  className="group p-6 rounded-2xl bg-gradient-to-br from-[#f5f1eb] to-white border border-[#e8e4dd] hover:border-primary/30 hover:shadow-lg transition-all text-center"
+                  className="group p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-white border border-slate-200 hover:border-primary/30 hover:shadow-lg transition-all text-center"
                 >
                   <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                     <IconComponent weight="duotone" className="w-6 h-6 text-primary" />

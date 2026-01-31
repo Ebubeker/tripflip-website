@@ -1,606 +1,680 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { format, parseISO, eachDayOfInterval } from 'date-fns'
-import { motion } from 'framer-motion'
-import { ArrowLeft, Loader2, Settings, Share2 } from 'lucide-react'
-import { toast } from 'sonner'
-
-import { Button } from '@/components/ui/button'
-import { TripHeader, TripSummaryCards, DayCards, TripMapSection, TripEditModal } from '@/components/trip'
-import { FlightsSection } from '@/components/trip/sections/flights-section'
-import { HotelsSection } from '@/components/trip/sections/hotels-section'
-import { BudgetSection } from '@/components/trip/sections/budget-section'
-import { PlacesSection } from '@/components/trip/sections/places-section'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Navbar } from '@/components/shared/navbar'
-import { createClient, createUntypedClient } from '@/lib/supabase/client'
-import type { MapDestination } from '@/components/maps/trip-map'
+import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { 
+  MapPin, 
+  Calendar, 
+  Users, 
+  Plane,
+  Building2,
+  Wallet,
+  Map,
+  Share2,
+  Download,
+  ChevronRight,
+  Clock,
+  Star,
+  Navigation,
+  Utensils,
+  Camera,
+  Loader2,
+  CheckCircle2,
+  AlertCircle
+} from 'lucide-react'
+import { format, parseISO, differenceInDays } from 'date-fns'
+import { createBrowserClient } from '@supabase/ssr'
 
 interface Trip {
   id: string
   title: string
-  description: string | null
+  description: string
   start_date: string
   end_date: string
-  currency: string
-  total_budget: number | null
   travelers_count: number
-}
-
-interface Destination {
-  id: string
-  city: string
-  country: string
-  latitude: number | null
-  longitude: number | null
-  arrival_date: string | null
-  departure_date: string | null
-  order_index: number
+  total_budget: number
+  currency: string
+  status: string
+  planning_status: string
 }
 
 interface Flight {
   id: string
-  airline: string | null
-  flight_number: string | null
   flight_type: string
-  departure_city: string
+  airline: string
+  flight_number: string
   departure_airport: string
-  departure_country: string | null
-  arrival_city: string
+  departure_city: string
   arrival_airport: string
-  arrival_country: string | null
-  departure_datetime: string | null
-  arrival_datetime: string | null
-  duration_minutes: number | null
+  arrival_city: string
+  departure_datetime: string
+  arrival_datetime: string
+  price: number
   stops: number
-  cabin_class: string
-  price: number | null
-  currency: string
-  booking_reference: string | null
-  booking_url: string | null
-  booking_status: string
-  seat_number: string | null
-  meal_included: boolean
-  notes: string | null
-  departure_latitude: number | null
-  departure_longitude: number | null
-  arrival_latitude: number | null
-  arrival_longitude: number | null
 }
 
 interface Accommodation {
   id: string
   name: string
-  type: string
-  address: string | null
   city: string
-  country: string | null
-  latitude: number | null
-  longitude: number | null
-  check_in_date: string | null
-  check_in_time: string | null
-  check_out_date: string | null
-  check_out_time: string | null
-  nights_count: number | null
-  room_type: string | null
-  room_count: number
-  guests_count: number
-  price_per_night: number | null
-  total_price: number | null
-  currency: string
-  rating: number | null
-  booking_reference: string | null
-  booking_url: string | null
-  booking_status: string
-  amenities: string[] | null
-  breakfast_included: boolean
-  cancellation_policy: string | null
-  notes: string | null
-}
-
-interface SavedPlace {
-  id: string
-  name: string
-  description: string | null
-  category: string | null
-  address: string | null
-  city: string | null
-  country: string | null
-  latitude: number | null
-  longitude: number | null
-  rating: number | null
-  price_level: string | null
-  phone: string | null
-  website: string | null
-  is_visited: boolean
-  personal_rating: number | null
-  personal_notes: string | null
-  provider: string | null
-  tags: string[] | null
-}
-
-interface Expense {
-  id: string
-  category: string
-  amount: number
-  currency: string
+  check_in_date: string
+  check_out_date: string
+  nights_count: number
+  total_price: number
+  rating: number
 }
 
 interface ItineraryItem {
   id: string
   date: string
   title: string
-  description: string | null
-  time_slot: string
-  start_time: string | null
+  description: string
   category: string
-  location_name: string | null
-  latitude: number | null
-  longitude: number | null
-  estimated_cost: number | null
-  currency: string
+  start_time: string
+  estimated_cost: number
+  status: string
 }
 
-// Map itinerary category to MapDestination type
-function getMapTypeFromCategory(category: string): MapDestination['type'] {
-  switch (category) {
-    case 'meal':
-      return 'restaurant'
-    case 'activity':
-      return 'activity'
-    case 'transport':
-    case 'flight':
-      return 'stopover'
-    case 'rest':
-    case 'accommodation':
-      return 'stopover'
-    default:
-      return 'attraction'
-  }
+interface TripDestination {
+  id: string
+  city: string
+  country: string
 }
 
-// Map saved_places category to MapDestination type
-function getMapTypeFromPlaceCategory(category: string): MapDestination['type'] {
-  switch (category?.toLowerCase()) {
-    case 'restaurant':
-      return 'restaurant'
-    case 'museum':
-      return 'museum'
-    case 'park':
-      return 'park'
-    case 'attraction':
-    default:
-      return 'attraction'
-  }
-}
-
-// Get day number from date relative to trip start
-function getDayNumber(tripStartDate: string, itemDate: string): number {
-  const start = parseISO(tripStartDate)
-  const item = parseISO(itemDate)
-  return Math.floor((item.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
-}
-
-export default function TripViewPage() {
+export default function TripPage() {
   const params = useParams()
   const router = useRouter()
   const tripId = params.tripId as string
-  const supabase = createClient()
-
+  
+  const [loading, setLoading] = useState(true)
   const [trip, setTrip] = useState<Trip | null>(null)
-  const [destinations, setDestinations] = useState<Destination[]>([])
   const [flights, setFlights] = useState<Flight[]>([])
   const [accommodations, setAccommodations] = useState<Accommodation[]>([])
-  const [itineraryItems, setItineraryItems] = useState<ItineraryItem[]>([])
-  const [savedPlaces, setSavedPlaces] = useState<SavedPlace[]>([])
-  const [expenses, setExpenses] = useState<Expense[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [itinerary, setItinerary] = useState<ItineraryItem[]>([])
+  const [destinations, setDestinations] = useState<TripDestination[]>([])
+  const [activeTab, setActiveTab] = useState('overview')
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 
   useEffect(() => {
-    async function fetchTripData() {
-      setIsLoading(true)
-      try {
-        // Fetch trip
-        const { data: tripData, error: tripError } = await supabase
-          .from('trips')
-          .select('*')
-          .eq('id', tripId)
-          .single()
-
-        if (tripError) throw tripError
-        setTrip(tripData)
-
-        // Fetch destinations
-        const { data: destData } = await supabase
-          .from('trip_destinations')
-          .select('*')
-          .eq('trip_id', tripId)
-          .order('order_index')
-
-        setDestinations(destData || [])
-
-        // Fetch flights (all statuses so users can see AI suggestions)
-        const { data: flightData } = await supabase
-          .from('flights')
-          .select('*')
-          .eq('trip_id', tripId)
-          .order('departure_datetime')
-
-        setFlights(flightData || [])
-
-        // Fetch accommodations (all statuses so users can see AI suggestions)
-        const { data: accomData } = await supabase
-          .from('accommodations')
-          .select('*')
-          .eq('trip_id', tripId)
-          .order('check_in_date')
-
-        setAccommodations(accomData || [])
-
-        // Fetch itinerary items (exclude suggested)
-        const { data: itineraryData } = await supabase
-          .from('itinerary_items')
-          .select('*')
-          .eq('trip_id', tripId)
-          .neq('status', 'suggested')
-          .order('date')
-          .order('order_index')
-
-        setItineraryItems(itineraryData || [])
-
-        // Fetch saved places (all fields)
-        const { data: placesData } = await supabase
-          .from('saved_places')
-          .select('*')
-          .eq('trip_id', tripId)
-
-        setSavedPlaces(placesData || [])
-
-        // Fetch expenses
-        const { data: expensesData } = await supabase
-          .from('expenses')
-          .select('id, category, amount, currency')
-          .eq('trip_id', tripId)
-
-        setExpenses(expensesData || [])
-
-      } catch (error) {
-        console.error('Error fetching trip:', error)
-        toast.error('Failed to load trip')
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
     fetchTripData()
-  }, [tripId, supabase])
+  }, [tripId])
 
-  // Refresh all data
-  const refreshData = async () => {
+  const fetchTripData = async () => {
     try {
-      // Refresh flights (all statuses)
-      const { data: flightData } = await supabase
-        .from('flights')
-        .select('*')
-        .eq('trip_id', tripId)
-        .order('departure_datetime')
-      setFlights(flightData || [])
-
-      // Refresh accommodations (all statuses)
-      const { data: accomData } = await supabase
-        .from('accommodations')
-        .select('*')
-        .eq('trip_id', tripId)
-        .order('check_in_date')
-      setAccommodations(accomData || [])
-
-      // Refresh itinerary (exclude suggested for now)
-      const { data: itineraryData } = await supabase
-        .from('itinerary_items')
-        .select('*')
-        .eq('trip_id', tripId)
-        .neq('status', 'suggested')
-        .order('date')
-        .order('order_index')
-      setItineraryItems(itineraryData || [])
-
-      // Refresh saved places
-      const { data: placesData } = await supabase
-        .from('saved_places')
-        .select('*')
-        .eq('trip_id', tripId)
-      setSavedPlaces(placesData || [])
-
-      // Refresh expenses
-      const { data: expensesData } = await supabase
-        .from('expenses')
-        .select('id, category, amount, currency')
-        .eq('trip_id', tripId)
-      setExpenses(expensesData || [])
-    } catch (error) {
-      console.error('Error refreshing data:', error)
-      toast.error('Failed to refresh data')
-    }
-  }
-
-  const handleUpdateTrip = async (title: string, description: string) => {
-    try {
-      const untypedSupabase = createUntypedClient()
-      const { error } = await untypedSupabase
+      // Fetch trip
+      const { data: tripData, error: tripError } = await supabase
         .from('trips')
-        .update({ title, description })
+        .select('*')
         .eq('id', tripId)
+        .single()
 
-      if (error) throw error
+      if (tripError) throw tripError
+      setTrip(tripData)
 
-      setTrip(prev => prev ? { ...prev, title, description } : null)
-      toast.success('Trip updated')
+      // Fetch related data in parallel
+      const [flightsRes, accommodationsRes, itineraryRes, destinationsRes] = await Promise.all([
+        supabase.from('flights').select('*').eq('trip_id', tripId).order('departure_datetime'),
+        supabase.from('accommodations').select('*').eq('trip_id', tripId),
+        supabase.from('itinerary_items').select('*').eq('trip_id', tripId).order('date').order('start_time'),
+        supabase.from('trip_destinations').select('*').eq('trip_id', tripId).order('order_index'),
+      ])
+
+      setFlights(flightsRes.data || [])
+      setAccommodations(accommodationsRes.data || [])
+      setItinerary(itineraryRes.data || [])
+      setDestinations(destinationsRes.data || [])
     } catch (error) {
-      console.error('Update error:', error)
-      toast.error('Failed to update trip')
-      throw error
+      console.error('Error fetching trip:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
-  // Group itinerary items by date
-  const groupedItinerary = itineraryItems.reduce<Record<string, ItineraryItem[]>>((acc, item) => {
-    if (!acc[item.date]) {
-      acc[item.date] = []
-    }
-    acc[item.date].push(item)
-    return acc
-  }, {})
-
-  // Create day data for DayCards
-  const dayData = trip?.start_date && trip?.end_date
-    ? eachDayOfInterval({
-        start: parseISO(trip.start_date),
-        end: parseISO(trip.end_date),
-      }).map(date => {
-        const dateStr = format(date, 'yyyy-MM-dd')
-        return {
-          date: dateStr,
-          items: groupedItinerary[dateStr] || [],
-        }
-      })
-    : []
-
-  // Convert destinations to map format
-  const destinationMarkers: MapDestination[] = destinations
-    .filter(d => d.latitude && d.longitude)
-    .map((dest, index) => ({
-      id: dest.id,
-      name: `${dest.city}, ${dest.country}`,
-      coordinates: [dest.longitude!, dest.latitude!] as [number, number],
-      type: index === 0 ? 'origin' : index === destinations.length - 1 ? 'destination' : 'stopover',
-      arrivalDate: dest.arrival_date || undefined,
-      departureDate: dest.departure_date || undefined,
-      order: dest.order_index,
-    }))
-
-  // Convert itinerary items with coordinates to map format
-  const itineraryMarkers: MapDestination[] = itineraryItems
-    .filter(item => item.latitude && item.longitude)
-    .map((item, index) => ({
-      id: item.id,
-      name: item.title || item.location_name || 'Activity',
-      coordinates: [item.longitude!, item.latitude!] as [number, number],
-      type: getMapTypeFromCategory(item.category),
-      category: item.category,
-      dayNumber: trip ? getDayNumber(trip.start_date, item.date) : undefined,
-      order: 100 + index,
-    }))
-
-  // Convert saved places to map format
-  const placeMarkers: MapDestination[] = savedPlaces
-    .filter(place => place.latitude && place.longitude)
-    .map((place, index) => ({
-      id: place.id,
-      name: place.name,
-      coordinates: [place.longitude!, place.latitude!] as [number, number],
-      type: getMapTypeFromPlaceCategory(place.category || 'other'),
-      category: place.category ?? undefined,
-      order: 200 + index,
-    }))
-
-  // Convert accommodations to hotel markers
-  const hotelMarkers: MapDestination[] = accommodations
-    .filter(hotel => hotel.latitude && hotel.longitude)
-    .map((hotel, index) => ({
-      id: hotel.id,
-      name: hotel.name,
-      coordinates: [hotel.longitude!, hotel.latitude!] as [number, number],
-      type: 'hotel' as const,
-      order: 300 + index,
-    }))
-
-  // Convert flights to airport markers
-  const airportMarkers: MapDestination[] = []
-  flights.forEach((flight, index) => {
-    if (flight.departure_latitude && flight.departure_longitude) {
-      airportMarkers.push({
-        id: `dep-${flight.id}`,
-        name: `${flight.departure_airport || 'Departure'} - ${flight.departure_city}`,
-        coordinates: [flight.departure_longitude, flight.departure_latitude] as [number, number],
-        type: 'airport' as const,
-        order: 400 + index * 2,
-      })
-    }
-    if (flight.arrival_latitude && flight.arrival_longitude) {
-      airportMarkers.push({
-        id: `arr-${flight.id}`,
-        name: `${flight.arrival_airport || 'Arrival'} - ${flight.arrival_city}`,
-        coordinates: [flight.arrival_longitude, flight.arrival_latitude] as [number, number],
-        type: 'airport' as const,
-        order: 401 + index * 2,
-      })
-    }
-  })
-
-  // Combine all markers for the map
-  const mapDestinations: MapDestination[] = [
-    ...destinationMarkers,
-    ...airportMarkers,
-    ...hotelMarkers,
-    ...placeMarkers,
-    ...itineraryMarkers,
-  ]
-
-  // Calculate estimated budget
-  const flightCosts = flights.reduce((sum, f) => sum + (f.price || 0), 0)
-  const hotelCosts = accommodations.reduce((sum, a) => sum + (a.total_price || 0), 0)
-  const activityCosts = itineraryItems.reduce((sum, i) => sum + (i.estimated_cost || 0), 0)
-  const estimatedBudget = flightCosts + hotelCosts + activityCosts
-
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-16 h-16 animate-spin text-[#0369a1] mx-auto mb-6" />
+          <p className="text-gray-600 font-medium text-lg">Loading your trip...</p>
+        </div>
       </div>
     )
   }
 
   if (!trip) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <p className="text-lg text-muted-foreground mb-4">Trip not found</p>
-        <Button asChild>
-          <Link href="/trips">Back to Trips</Link>
-        </Button>
+      <div className="min-h-screen bg-[#fafafa] flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-6" />
+          <h2 className="text-2xl font-bold mb-3 text-gray-900">Trip not found</h2>
+          <p className="text-gray-600 mb-6">This trip doesn't exist or you don't have access to it</p>
+          <Button onClick={() => router.push('/plan')} className="bg-[#0369a1] hover:bg-[#0284c7]">Plan a new trip</Button>
+        </div>
       </div>
     )
   }
 
-  const primaryDestination = destinations[0]
-    ? `${destinations[0].city}, ${destinations[0].country}`
-    : 'Unknown'
+  const startDate = parseISO(trip.start_date)
+  const endDate = parseISO(trip.end_date)
+  const nights = differenceInDays(endDate, startDate)
+  const destination = destinations[0]?.city || 'Your Trip'
+
+  // Group itinerary by date
+  const itineraryByDate = itinerary.reduce((acc, item) => {
+    const date = item.date
+    if (!acc[date]) acc[date] = []
+    acc[date].push(item)
+    return acc
+  }, {} as Record<string, ItineraryItem[]>)
+
+  // Calculate costs
+  const flightsCost = flights.reduce((sum, f) => sum + (f.price || 0), 0)
+  const hotelsCost = accommodations.reduce((sum, a) => sum + (a.total_price || 0), 0)
+  const activitiesCost = itinerary.reduce((sum, i) => sum + (i.estimated_cost || 0), 0) * trip.travelers_count
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#fafafa]">
       <Navbar />
-
-      <main className="container max-w-5xl py-6 px-4">
-        {/* Back button and actions */}
-        <div className="flex items-center justify-between mb-6">
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/trips">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Trips
-            </Link>
-          </Button>
-
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              <Share2 className="h-4 w-4 mr-2" />
-              Share
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setIsEditModalOpen(true)}>
-              <Settings className="h-4 w-4 mr-2" />
-              Edit Details
-            </Button>
-          </div>
+      
+      {/* Hero Header */}
+      <div className="relative bg-gradient-to-br from-[#0369a1] via-[#0284c7] to-[#0ea5e9] text-white pt-20 pb-16 overflow-hidden">
+        {/* Decorative background elements */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-72 h-72 bg-white rounded-full blur-3xl" />
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-6"
-        >
-          {/* Trip Header */}
-          <TripHeader
-            title={trip.title}
-            description={trip.description || undefined}
-            startDate={trip.start_date}
-            endDate={trip.end_date}
-            destination={primaryDestination}
-            travelers={trip.travelers_count}
-            onUpdate={handleUpdateTrip}
-          />
+        <div className="container mx-auto px-4 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+              className="flex items-center gap-2 text-white/90 mb-3"
+            >
+              <MapPin className="w-4 h-4" />
+              <span className="font-medium">{destination}</span>
+            </motion.div>
 
-          {/* Summary Cards */}
-          <TripSummaryCards
-            flight={flights[0] || null}
-            accommodation={accommodations[0] || null}
-            estimatedBudget={estimatedBudget || trip.total_budget || undefined}
-            currency={trip.currency}
-          />
+            <motion.h1
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="text-5xl md:text-6xl font-bold mb-5 tracking-tight"
+            >
+              {trip.title}
+            </motion.h1>
 
-          {/* Flights Section */}
-          <FlightsSection
-            flights={flights}
-            tripId={tripId}
-            currency={trip.currency}
-            onUpdate={refreshData}
-          />
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.4 }}
+              className="text-lg md:text-xl text-white/95 mb-8 max-w-3xl leading-relaxed"
+            >
+              {trip.description}
+            </motion.p>
 
-          {/* Hotels Section */}
-          <HotelsSection
-            accommodations={accommodations}
-            tripId={tripId}
-            currency={trip.currency}
-            onUpdate={refreshData}
-          />
+            {/* Quick Stats */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="flex flex-wrap gap-8"
+            >
+              <div className="flex items-center gap-3 group">
+                <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm group-hover:bg-white/20 transition-colors">
+                  <Calendar className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-sm text-white/80 font-medium">Dates</div>
+                  <div className="font-semibold">{format(startDate, 'MMM d')} - {format(endDate, 'MMM d, yyyy')} <span className="text-white/80 font-normal">({nights} nights)</span></div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 group">
+                <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm group-hover:bg-white/20 transition-colors">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-sm text-white/80 font-medium">Travelers</div>
+                  <div className="font-semibold">{trip.travelers_count} {trip.travelers_count === 1 ? 'person' : 'people'}</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 group">
+                <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm group-hover:bg-white/20 transition-colors">
+                  <Wallet className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-sm text-white/80 font-medium">Budget</div>
+                  <div className="text-2xl font-bold">${trip.total_budget?.toLocaleString()}</div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        </div>
+      </div>
 
-          {/* Budget Section */}
-          <BudgetSection
-            flights={flights}
-            accommodations={accommodations}
-            itineraryItems={itineraryItems}
-            expenses={expenses}
-            totalBudget={trip.total_budget}
-            currency={trip.currency}
-          />
+      {/* Action Buttons */}
+      <div className="bg-white/80 backdrop-blur-md border-b border-black/10 sticky top-16 z-10 shadow-sm">
+        <div className="container mx-auto px-4 py-4 flex gap-3">
+          <Button variant="outline" size="sm" className="gap-2 border-black/10 hover:border-black/20 hover:bg-black/5 transition-all text-gray-900">
+            <Share2 className="w-4 h-4" />
+            Share
+          </Button>
+          <Button variant="outline" size="sm" className="gap-2 border-black/10 hover:border-black/20 hover:bg-black/5 transition-all text-gray-900">
+            <Download className="w-4 h-4" />
+            Export PDF
+          </Button>
+          <Button variant="outline" size="sm" className="gap-2 border-black/10 hover:border-black/20 hover:bg-black/5 transition-all text-gray-900">
+            <Map className="w-4 h-4" />
+            View Map
+          </Button>
+        </div>
+      </div>
 
-          {/* Places Section */}
-          <PlacesSection
-            places={savedPlaces}
-            tripId={tripId}
-            onUpdate={refreshData}
-          />
+      {/* Tabs Content */}
+      <div className="container mx-auto px-4 py-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="bg-white border border-black/10 p-1.5 rounded-xl shadow-sm">
+            <TabsTrigger value="overview" className="rounded-lg px-6 !text-gray-900 hover:!text-gray-900 hover:bg-gray-50 data-[state=active]:!text-gray-900 data-[state=active]:bg-[#0369a1]/10 data-[state=active]:font-semibold transition-all">Overview</TabsTrigger>
+            <TabsTrigger value="itinerary" className="rounded-lg px-6 !text-gray-900 hover:!text-gray-900 hover:bg-gray-50 data-[state=active]:!text-gray-900 data-[state=active]:bg-[#0369a1]/10 data-[state=active]:font-semibold transition-all">Itinerary</TabsTrigger>
+            <TabsTrigger value="flights" className="rounded-lg px-6 !text-gray-900 hover:!text-gray-900 hover:bg-gray-50 data-[state=active]:!text-gray-900 data-[state=active]:bg-[#0369a1]/10 data-[state=active]:font-semibold transition-all">Flights</TabsTrigger>
+            <TabsTrigger value="hotels" className="rounded-lg px-6 !text-gray-900 hover:!text-gray-900 hover:bg-gray-50 data-[state=active]:!text-gray-900 data-[state=active]:bg-[#0369a1]/10 data-[state=active]:font-semibold transition-all">Hotels</TabsTrigger>
+            <TabsTrigger value="budget" className="rounded-lg px-6 !text-gray-900 hover:!text-gray-900 hover:bg-gray-50 data-[state=active]:!text-gray-900 data-[state=active]:bg-[#0369a1]/10 data-[state=active]:font-semibold transition-all">Budget</TabsTrigger>
+          </TabsList>
 
-          {/* Day-by-Day Itinerary */}
-          <DayCards
-            days={dayData}
-            currency={trip.currency}
-          />
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
+            {/* Summary Cards */}
+            <div className="grid md:grid-cols-3 gap-6">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                className="bg-white rounded-2xl p-7 shadow-sm border border-black/10 hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-[#0369a1]/10 flex items-center justify-center">
+                    <Plane className="w-6 h-6 text-[#0369a1]" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 font-medium">Flights</p>
+                    <p className="text-2xl font-bold text-gray-900">{flights.length > 0 ? `${flights.length} booked` : 'Not found'}</p>
+                  </div>
+                </div>
+                {flights[0] && (
+                  <p className="text-sm text-gray-600 font-medium">
+                    {flights[0].departure_airport} → {flights[0].arrival_airport}
+                  </p>
+                )}
+              </motion.div>
 
-          {/* Map Section */}
-          <TripMapSection
-            destinations={mapDestinations}
-            defaultExpanded={false}
-          />
-        </motion.div>
-      </main>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                className="bg-white rounded-2xl p-7 shadow-sm border border-black/10 hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-600/10 flex items-center justify-center">
+                    <Building2 className="w-6 h-6 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 font-medium">Accommodation</p>
+                    <p className="text-2xl font-bold text-gray-900">{nights} nights</p>
+                  </div>
+                </div>
+                {accommodations[0] && (
+                  <p className="text-sm text-gray-600 font-medium">{accommodations[0].name}</p>
+                )}
+              </motion.div>
 
-      {/* Edit Modal */}
-      <TripEditModal
-        open={isEditModalOpen}
-        onOpenChange={setIsEditModalOpen}
-        trip={{
-          id: trip.id,
-          title: trip.title,
-          description: trip.description,
-          start_date: trip.start_date,
-          end_date: trip.end_date,
-          travelers_count: trip.travelers_count,
-          total_budget: trip.total_budget,
-          currency: trip.currency,
-        }}
-        onSave={async () => {
-          // Refresh trip data after save
-          const { data: updatedTrip } = await supabase
-            .from('trips')
-            .select('*')
-            .eq('id', tripId)
-            .single()
-          if (updatedTrip) {
-            setTrip(updatedTrip)
-          }
-        }}
-      />
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                className="bg-white rounded-2xl p-7 shadow-sm border border-black/10 hover:shadow-md transition-shadow"
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-violet-600/10 flex items-center justify-center">
+                    <Camera className="w-6 h-6 text-violet-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 font-medium">Activities</p>
+                    <p className="text-2xl font-bold text-gray-900">{itinerary.length} planned</p>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600 font-medium">
+                  ~{Math.round(itinerary.length / nights)} per day
+                </p>
+              </motion.div>
+            </div>
+
+            {/* Highlights */}
+            <div className="bg-white rounded-2xl p-8 shadow-sm border border-black/10">
+              <h3 className="text-2xl font-bold mb-6 text-gray-900">Trip Highlights</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                {itinerary.slice(0, 6).map((item, i) => (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 + i * 0.05 }}
+                    whileHover={{ x: 4, transition: { duration: 0.2 } }}
+                    className="flex items-center gap-4 p-4 rounded-xl bg-gray-50/80 hover:bg-gray-100/80 transition-all border border-black/5"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0369a1] to-[#0ea5e9] flex items-center justify-center text-white font-bold text-sm shadow-sm">
+                      {i + 1}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-gray-900 leading-snug">{item.title}</p>
+                      <p className="text-sm text-gray-500 capitalize mt-0.5">{item.category}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* Itinerary Tab */}
+          <TabsContent value="itinerary" className="space-y-6">
+            {Object.entries(itineraryByDate).map(([date, items], dayIndex) => (
+              <motion.div
+                key={date}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: dayIndex * 0.1 }}
+                className="bg-white rounded-2xl shadow-sm border border-black/10 overflow-hidden"
+              >
+                {/* Day Header */}
+                <div className="bg-gradient-to-r from-gray-50 to-gray-50/50 px-8 py-5 border-b border-black/10">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500 font-medium">Day {dayIndex + 1}</p>
+                      <p className="text-xl font-bold text-gray-900 mt-0.5">{format(parseISO(date), 'EEEE, MMMM d')}</p>
+                    </div>
+                    <div className="text-sm text-gray-600 font-medium bg-white px-3 py-1.5 rounded-full border border-black/10">
+                      {items.length} {items.length === 1 ? 'activity' : 'activities'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Activities */}
+                <div className="p-6 space-y-4">
+                  {items.map((item, i) => (
+                    <div key={item.id} className="flex gap-4">
+                      {/* Time */}
+                      <div className="w-16 text-sm text-gray-500 pt-1">
+                        {item.start_time || '--:--'}
+                      </div>
+                      
+                      {/* Timeline */}
+                      <div className="flex flex-col items-center">
+                        <div className={`w-3 h-3 rounded-full ${
+                          item.category === 'meal' ? 'bg-orange-400' :
+                          item.category === 'activity' ? 'bg-blue-400' :
+                          'bg-gray-400'
+                        }`} />
+                        {i < items.length - 1 && (
+                          <div className="w-0.5 flex-1 bg-gray-200 my-1" />
+                        )}
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 pb-4">
+                        <h4 className="font-medium text-gray-900">{item.title}</h4>
+                        {item.description && (
+                          <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+                        )}
+                        <div className="flex gap-4 mt-2 text-sm text-gray-500">
+                          {item.estimated_cost > 0 && (
+                            <span>${item.estimated_cost}</span>
+                          )}
+                          <span className="capitalize">{item.category}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            ))}
+
+            {Object.keys(itineraryByDate).length === 0 && (
+              <div className="bg-white rounded-2xl p-16 text-center border border-black/10 shadow-sm">
+                <div className="max-w-sm mx-auto">
+                  <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-600 font-medium text-lg">No itinerary items yet</p>
+                  <p className="text-gray-500 text-sm mt-2">Start planning your daily activities</p>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Flights Tab */}
+          <TabsContent value="flights" className="space-y-4">
+            {flights.map((flight) => (
+              <motion.div
+                key={flight.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                whileHover={{ y: -2, transition: { duration: 0.2 } }}
+                className="bg-white rounded-2xl p-8 shadow-sm border border-black/10 hover:shadow-md transition-all"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    flight.flight_type === 'outbound' 
+                      ? 'bg-blue-100 text-blue-700' 
+                      : 'bg-green-100 text-green-700'
+                  }`}>
+                    {flight.flight_type === 'outbound' ? 'Departure' : 'Return'}
+                  </span>
+                  <span className="text-lg font-bold text-gray-900">${flight.price?.toLocaleString()}</span>
+                </div>
+
+                <div className="flex items-center gap-8">
+                  {/* Departure */}
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-gray-900">{flight.departure_airport}</p>
+                    <p className="text-sm text-gray-500">{flight.departure_city}</p>
+                    {flight.departure_datetime && (
+                      <p className="text-sm font-medium mt-2 text-gray-700">
+                        {format(parseISO(flight.departure_datetime), 'HH:mm')}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Flight Line */}
+                  <div className="flex-1 flex items-center">
+                    <div className="flex-1 border-t-2 border-dashed border-gray-300" />
+                    <Plane className="w-5 h-5 text-gray-400 mx-2" />
+                    <div className="flex-1 border-t-2 border-dashed border-gray-300" />
+                  </div>
+
+                  {/* Arrival */}
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-gray-900">{flight.arrival_airport}</p>
+                    <p className="text-sm text-gray-500">{flight.arrival_city}</p>
+                    {flight.arrival_datetime && (
+                      <p className="text-sm font-medium mt-2 text-gray-700">
+                        {format(parseISO(flight.arrival_datetime), 'HH:mm')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-6 pt-6 border-t border-black/10 flex items-center justify-between text-sm text-gray-600 font-medium">
+                  <span>{flight.airline} • {flight.flight_number}</span>
+                  <span>{flight.stops === 0 ? 'Direct' : `${flight.stops} stop${flight.stops > 1 ? 's' : ''}`}</span>
+                </div>
+              </motion.div>
+            ))}
+
+            {flights.length === 0 && (
+              <div className="bg-white rounded-2xl p-16 text-center border border-black/10 shadow-sm">
+                <div className="max-w-sm mx-auto">
+                  <Plane className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-600 font-medium text-lg">No flights found for this trip</p>
+                  <p className="text-gray-500 text-sm mt-2">Try searching for flights manually</p>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Hotels Tab */}
+          <TabsContent value="hotels" className="space-y-4">
+            {accommodations.map((hotel) => (
+              <motion.div
+                key={hotel.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                whileHover={{ y: -2, transition: { duration: 0.2 } }}
+                className="bg-white rounded-2xl p-8 shadow-sm border border-black/10 hover:shadow-md transition-all"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900">{hotel.name}</h3>
+                    <p className="text-gray-500">{hotel.city}</p>
+                  </div>
+                  {hotel.rating && (
+                    <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded">
+                      <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                      <span className="font-medium">{hotel.rating}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <p className="text-sm text-gray-500">Check-in</p>
+                    <p className="font-medium text-gray-900">{format(parseISO(hotel.check_in_date), 'MMM d, yyyy')}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <p className="text-sm text-gray-500">Check-out</p>
+                    <p className="font-medium text-gray-900">{format(parseISO(hotel.check_out_date), 'MMM d, yyyy')}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-6 mt-6 border-t border-black/10">
+                  <span className="text-gray-600 font-medium">{hotel.nights_count} {hotel.nights_count === 1 ? 'night' : 'nights'}</span>
+                  <span className="text-2xl font-bold text-gray-900">${hotel.total_price?.toLocaleString()}</span>
+                </div>
+              </motion.div>
+            ))}
+
+            {accommodations.length === 0 && (
+              <div className="bg-white rounded-2xl p-16 text-center border border-black/10 shadow-sm">
+                <div className="max-w-sm mx-auto">
+                  <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-600 font-medium text-lg">No accommodations found</p>
+                  <p className="text-gray-500 text-sm mt-2">Search and book your stay</p>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Budget Tab */}
+          <TabsContent value="budget" className="space-y-6">
+            {/* Total */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="relative bg-gradient-to-br from-[#0369a1] via-[#0284c7] to-[#0ea5e9] text-white rounded-2xl p-8 overflow-hidden shadow-lg"
+            >
+              <div className="absolute inset-0 opacity-10">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full blur-3xl" />
+              </div>
+              <div className="relative z-10">
+                <p className="text-white/90 mb-2 font-medium">Total Trip Cost</p>
+                <p className="text-5xl md:text-6xl font-bold tracking-tight">${trip.total_budget?.toLocaleString()}</p>
+                <p className="text-white/80 mt-3 text-lg">
+                  ${Math.round((trip.total_budget || 0) / trip.travelers_count).toLocaleString()} per person
+                </p>
+              </div>
+            </motion.div>
+
+            {/* Breakdown */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="bg-white rounded-2xl p-8 shadow-sm border border-black/10 space-y-4"
+            >
+              <h3 className="text-2xl font-bold text-gray-900 mb-6">Cost Breakdown</h3>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-between py-4 border-b border-black/10">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-[#0369a1]/10 flex items-center justify-center">
+                      <Plane className="w-6 h-6 text-[#0369a1]" />
+                    </div>
+                    <span className="text-gray-700 font-medium text-lg">Flights</span>
+                  </div>
+                  <span className="font-bold text-gray-900 text-xl">${flightsCost.toLocaleString()}</span>
+                </div>
+
+                <div className="flex items-center justify-between py-4 border-b border-black/10">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-600/10 flex items-center justify-center">
+                      <Building2 className="w-6 h-6 text-emerald-600" />
+                    </div>
+                    <span className="text-gray-700 font-medium text-lg">Accommodation</span>
+                  </div>
+                  <span className="font-bold text-gray-900 text-xl">${hotelsCost.toLocaleString()}</span>
+                </div>
+
+                <div className="flex items-center justify-between py-4 border-b border-black/10">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-violet-600/10 flex items-center justify-center">
+                      <Camera className="w-6 h-6 text-violet-600" />
+                    </div>
+                    <span className="text-gray-700 font-medium text-lg">Activities</span>
+                  </div>
+                  <span className="font-bold text-gray-900 text-xl">${activitiesCost.toLocaleString()}</span>
+                </div>
+
+                <div className="flex items-center justify-between py-4 border-b border-black/10">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-orange-600/10 flex items-center justify-center">
+                      <Utensils className="w-6 h-6 text-orange-600" />
+                    </div>
+                    <span className="text-gray-700 font-medium text-lg">Estimated Meals</span>
+                  </div>
+                  <span className="font-bold text-gray-900 text-xl">
+                    ${Math.round((trip.total_budget || 0) - flightsCost - hotelsCost - activitiesCost).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Per Day */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="bg-white rounded-2xl p-8 shadow-sm border border-black/10"
+            >
+              <h3 className="text-xl font-bold mb-6 text-gray-900">Daily Average</h3>
+              <div className="text-4xl md:text-5xl font-bold text-[#0369a1]">
+                ${Math.round((trip.total_budget || 0) / nights).toLocaleString()}
+                <span className="text-lg font-normal text-gray-500"> / day</span>
+              </div>
+            </motion.div>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   )
 }

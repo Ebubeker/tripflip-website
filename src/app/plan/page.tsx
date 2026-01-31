@@ -1,338 +1,368 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { motion } from 'framer-motion'
-import {
-  ArrowRight,
-  MapPin,
-  Loader2,
-  Calendar,
-  Users,
-  ChevronRight,
-  ArrowLeft,
-} from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
-import { DestinationSearch, DestinationResult, QuickOptions, TripOptions } from '@/components/home'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Navbar } from '@/components/shared/navbar'
-import { createClient } from '@/lib/supabase/client'
-import { addWeeks, addDays, format, differenceInDays } from 'date-fns'
-import { toast } from 'sonner'
-
-interface Trip {
-  id: string
-  title: string
-  start_date: string
-  end_date: string
-  status: string
-  travelers_count: number
-  trip_destinations: {
-    city: string
-    country: string
-  }[]
-}
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Calendar } from '@/components/ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { 
+  MapPin, 
+  CalendarDays, 
+  Users, 
+  Plane,
+  Sparkles,
+  Loader2,
+  ChevronDown,
+  ChevronUp
+} from 'lucide-react'
+import { format, addDays } from 'date-fns'
+import { DateRange } from 'react-day-picker'
 
 export default function PlanPage() {
   const router = useRouter()
-  const [selectedDestination, setSelectedDestination] = useState<DestinationResult | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [recentTrips, setRecentTrips] = useState<Trip[]>([])
-  const [loadingTrips, setLoadingTrips] = useState(true)
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
-  const [options, setOptions] = useState<TripOptions>({
-    startDate: addWeeks(new Date(), 2),
-    endDate: addDays(addWeeks(new Date(), 2), 7),
-    travelers: 1,
-    budget: undefined,
-    currency: 'USD',
-    departureCity: undefined,
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [generationStep, setGenerationStep] = useState('')
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  
+  // Form state - minimal inputs
+  const [destination, setDestination] = useState('')
+  const [departureCity, setDepartureCity] = useState('')
+  const [travelers, setTravelers] = useState(1)
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: addDays(new Date(), 14),
+    to: addDays(new Date(), 21),
   })
+  
+  // Optional preferences
+  const [budget, setBudget] = useState<'budget' | 'mid-range' | 'luxury'>('mid-range')
+  const [pace, setPace] = useState<'relaxed' | 'moderate' | 'active'>('moderate')
 
-  useEffect(() => {
-    async function checkAuthAndFetchTrips() {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+  const generationSteps = [
+    'Analyzing destination...',
+    'Searching for best flights...',
+    'Finding perfect accommodations...',
+    'Discovering attractions & activities...',
+    'Creating optimized itinerary...',
+    'Calculating total costs...',
+    'Finalizing your trip plan...'
+  ]
 
-      if (!user) {
-        setIsAuthenticated(false)
-        setLoadingTrips(false)
-        return
-      }
-
-      setIsAuthenticated(true)
-
-      const { data, error } = await supabase
-        .from('trips')
-        .select(`
-          id,
-          title,
-          start_date,
-          end_date,
-          status,
-          travelers_count,
-          trip_destinations (
-            city,
-            country
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(6)
-
-      if (error) {
-        console.error('Error fetching trips:', error)
-      } else {
-        setRecentTrips(data || [])
-      }
-      setLoadingTrips(false)
-    }
-
-    checkAuthAndFetchTrips()
-  }, [])
-
-  const handleDestinationSelect = (destination: DestinationResult) => {
-    setSelectedDestination(destination)
-  }
-
-  const handleStartPlanning = async () => {
-    if (!selectedDestination) {
-      toast.error('Please select a destination first')
+  const handleGenerate = async () => {
+    if (!destination || !departureCity || !dateRange?.from || !dateRange?.to) {
       return
     }
 
-    if (!isAuthenticated) {
-      toast.error('Please sign in to create a trip')
-      router.push('/login')
-      return
+    setIsGenerating(true)
+    
+    // Simulate step-by-step generation with visual feedback
+    for (let i = 0; i < generationSteps.length; i++) {
+      setGenerationStep(generationSteps[i])
+      await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 400))
     }
 
-    setIsLoading(true)
     try {
-      const response = await fetch('/api/trips/auto-plan', {
+      const response = await fetch('/api/trips/auto-generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          destination: {
-            name: selectedDestination.fullName,
-            coordinates: selectedDestination.coordinates,
-          },
-          departureCity: options.departureCity,
-          startDate: options.startDate?.toISOString(),
-          endDate: options.endDate?.toISOString(),
-          travelers: options.travelers,
-          budget: options.budget,
-          currency: options.currency,
+          destination,
+          departureCity,
+          startDate: format(dateRange.from, 'yyyy-MM-dd'),
+          endDate: format(dateRange.to, 'yyyy-MM-dd'),
+          travelers,
+          budget,
+          pace,
         }),
       })
 
       const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create trip')
+      
+      if (data.tripId) {
+        router.push(`/trip/${data.tripId}`)
+      } else {
+        throw new Error(data.error || 'Failed to generate trip')
       }
-
-      router.push(`/planning/${data.tripId}`)
     } catch (error) {
-      console.error('Error starting trip:', error)
-      toast.error(error instanceof Error ? error.message : 'Failed to start planning')
-    } finally {
-      setIsLoading(false)
+      console.error('Generation error:', error)
+      setIsGenerating(false)
+      setGenerationStep('')
     }
   }
 
-  const getTripDuration = (startDate: string, endDate: string) => {
-    const days = differenceInDays(new Date(endDate), new Date(startDate)) + 1
-    return `${days} day${days !== 1 ? 's' : ''}`
-  }
-
-  const getDestinationText = (destinations: { city: string; country: string }[]) => {
-    if (!destinations || destinations.length === 0) return 'No destination'
-    if (destinations.length === 1) return destinations[0].city
-    return `${destinations[0].city} +${destinations.length - 1}`
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-pink-50 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-sky-50 to-white">
       <Navbar />
-
-      <div className="container py-8 md:py-12">
-        {/* Back link */}
-        <Link
-          href="/"
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-8"
+      
+      <main className="container mx-auto px-4 pt-24 pb-16">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-2xl mx-auto"
         >
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          Back to home
-        </Link>
-
-        {/* Trip Finder Section */}
-        <section className="mx-auto max-w-2xl mb-12 md:mb-16">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="text-center"
-          >
-            <h1 className="mb-2 text-3xl font-bold tracking-tight sm:text-4xl text-gray-900">
-              Where to next?
+          {/* Header */}
+          <div className="text-center mb-12">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', delay: 0.1 }}
+              className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-6"
+            >
+              <Sparkles className="w-8 h-8 text-primary" />
+            </motion.div>
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+              Plan Your Trip
             </h1>
-            <p className="mb-6 text-muted-foreground">
-              Enter a destination and we'll plan everything for you
+            <p className="text-xl text-gray-600">
+              Tell us where you want to go. We'll handle everything else.
             </p>
-          </motion.div>
+          </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.1 }}
-          >
-            <DestinationSearch
-              onSelect={handleDestinationSelect}
-              placeholder="Search any destination..."
-            />
-
-            {selectedDestination && (
+          {/* Main Form */}
+          <AnimatePresence mode="wait">
+            {!isGenerating ? (
               <motion.div
+                key="form"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="bg-white rounded-3xl shadow-xl p-8 space-y-6"
+              >
+                {/* Destination */}
+                <div className="space-y-2">
+                  <Label htmlFor="destination" className="text-base font-medium flex items-center gap-2 text-gray-900">
+                    <MapPin className="w-4 h-4 text-blue-600" />
+                    Where do you want to go?
+                  </Label>
+                  <Input
+                    id="destination"
+                    placeholder="Paris, Japan, Tuscany..."
+                    value={destination}
+                    onChange={(e) => setDestination(e.target.value)}
+                    className="h-14 text-lg rounded-xl border border-gray-300 !bg-transparent text-gray-900 placeholder:text-gray-400 focus:border-blue-500"
+                  />
+                  <p className="text-sm text-gray-500">
+                    Enter a city, region, or country
+                  </p>
+                </div>
+
+                {/* Departure City */}
+                <div className="space-y-2">
+                  <Label htmlFor="departure" className="text-base font-medium flex items-center gap-2 text-gray-900">
+                    <Plane className="w-4 h-4 text-blue-600" />
+                    Where are you flying from?
+                  </Label>
+                  <Input
+                    id="departure"
+                    placeholder="New York, London, Tokyo..."
+                    value={departureCity}
+                    onChange={(e) => setDepartureCity(e.target.value)}
+                    className="h-14 text-lg rounded-xl border border-gray-300 !bg-transparent text-gray-900 placeholder:text-gray-400 focus:border-blue-500"
+                  />
+                </div>
+
+                {/* Date Range */}
+                <div className="space-y-2">
+                  <Label className="text-base font-medium flex items-center gap-2 text-gray-900">
+                    <CalendarDays className="w-4 h-4 text-blue-600" />
+                    When are you traveling?
+                  </Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full h-14 text-lg rounded-xl border border-gray-300 !bg-transparent justify-start text-left font-normal hover:bg-gray-50 text-gray-900"
+                      >
+                        {dateRange?.from ? (
+                          dateRange.to ? (
+                            <>
+                              {format(dateRange.from, 'MMM d, yyyy')} - {format(dateRange.to, 'MMM d, yyyy')}
+                              <span className="ml-auto text-gray-500">
+                                ({Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24))} nights)
+                              </span>
+                            </>
+                          ) : (
+                            format(dateRange.from, 'MMM d, yyyy')
+                          )
+                        ) : (
+                          <span className="text-gray-400">Select your travel dates</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        initialFocus
+                        mode="range"
+                        defaultMonth={dateRange?.from}
+                        selected={dateRange}
+                        onSelect={setDateRange}
+                        numberOfMonths={2}
+                        disabled={(date) => date < new Date()}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* Travelers */}
+                <div className="space-y-2">
+                  <Label className="text-base font-medium flex items-center gap-2 text-gray-900">
+                    <Users className="w-4 h-4 text-blue-600" />
+                    How many travelers?
+                  </Label>
+                  <div className="flex items-center gap-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-14 w-14 rounded-xl border border-gray-300 !bg-transparent text-gray-700 hover:bg-gray-50"
+                      onClick={() => setTravelers(Math.max(1, travelers - 1))}
+                      disabled={travelers <= 1}
+                    >
+                      -
+                    </Button>
+                    <span className="text-2xl font-semibold w-12 text-center text-gray-900">{travelers}</span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-14 w-14 rounded-xl border border-gray-300 !bg-transparent text-gray-700 hover:bg-gray-50"
+                      onClick={() => setTravelers(Math.min(10, travelers + 1))}
+                      disabled={travelers >= 10}
+                    >
+                      +
+                    </Button>
+                    <span className="text-gray-600">
+                      {travelers === 1 ? 'traveler' : 'travelers'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Advanced Options Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  {showAdvanced ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  {showAdvanced ? 'Hide' : 'Show'} preferences
+                </button>
+
+                {/* Advanced Options */}
+                <AnimatePresence>
+                  {showAdvanced && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="space-y-4 overflow-hidden"
+                    >
+                      {/* Budget */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Budget Level</Label>
+                        <div className="flex gap-2">
+                          {(['budget', 'mid-range', 'luxury'] as const).map((level) => (
+                            <button
+                              key={level}
+                              type="button"
+                              onClick={() => setBudget(level)}
+                              className={`flex-1 py-3 px-4 rounded-xl border-2 transition-all capitalize ${
+                                budget === level
+                                  ? 'border-primary bg-primary/5 text-primary'
+                                  : 'border-gray-200 hover:border-gray-300'
+                              }`}
+                            >
+                              {level}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Pace */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Travel Pace</Label>
+                        <div className="flex gap-2">
+                          {(['relaxed', 'moderate', 'active'] as const).map((level) => (
+                            <button
+                              key={level}
+                              type="button"
+                              onClick={() => setPace(level)}
+                              className={`flex-1 py-3 px-4 rounded-xl border-2 transition-all capitalize ${
+                                pace === level
+                                  ? 'border-primary bg-primary/5 text-primary'
+                                  : 'border-gray-200 hover:border-gray-300'
+                              }`}
+                            >
+                              {level}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Generate Button */}
+                <Button
+                  onClick={handleGenerate}
+                  disabled={!destination || !departureCity || !dateRange?.from || !dateRange?.to}
+                  className="w-full h-16 text-xl rounded-xl bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-600/40 transition-all disabled:bg-gray-300 disabled:shadow-none"
+                >
+                  <Sparkles className="w-6 h-6 mr-2" />
+                  Generate My Trip
+                </Button>
+
+                <p className="text-center text-sm text-gray-500">
+                  We'll find the best flights, hotels, and activities automatically
+                </p>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="generating"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="mt-3 flex items-center justify-center gap-2 text-sm text-primary"
+                className="bg-white rounded-3xl shadow-xl p-12 text-center"
               >
-                <MapPin className="h-4 w-4" />
-                <span>{selectedDestination.fullName}</span>
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                  className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-8"
+                >
+                  <Sparkles className="w-10 h-10 text-primary" />
+                </motion.div>
+                
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                  Creating Your Perfect Trip
+                </h2>
+                
+                <motion.p
+                  key={generationStep}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-lg text-gray-600 mb-8"
+                >
+                  {generationStep}
+                </motion.p>
+
+                <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                  <motion.div
+                    className="h-full bg-primary rounded-full"
+                    initial={{ width: '0%' }}
+                    animate={{ width: '100%' }}
+                    transition={{ duration: 6, ease: 'easeInOut' }}
+                  />
+                </div>
+
+                <p className="mt-6 text-sm text-gray-500">
+                  This usually takes about 10-15 seconds
+                </p>
               </motion.div>
             )}
-
-            <div className="mt-4">
-              <QuickOptions options={options} onChange={setOptions} />
-            </div>
-
-            <div className="mt-6 flex justify-center">
-              <Button
-                size="lg"
-                onClick={handleStartPlanning}
-                disabled={!selectedDestination || isLoading}
-                className="h-12 px-8 rounded-xl"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    Plan My Trip
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </>
-                )}
-              </Button>
-            </div>
-
-            {!isAuthenticated && isAuthenticated !== null && (
-              <p className="mt-4 text-center text-sm text-muted-foreground">
-                <Link href="/login" className="text-primary hover:underline">Sign in</Link> to save your trips
-              </p>
-            )}
-          </motion.div>
-        </section>
-
-        {/* Recent Trips Section - Only for authenticated users */}
-        {isAuthenticated && (
-          <section>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">Your Trips</h2>
-              {recentTrips.length > 0 && (
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href="/trips" className="text-muted-foreground hover:text-foreground">
-                    View all
-                    <ChevronRight className="ml-1 h-4 w-4" />
-                  </Link>
-                </Button>
-              )}
-            </div>
-
-            {loadingTrips ? (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {[1, 2, 3].map((i) => (
-                  <Card key={i} className="animate-pulse">
-                    <CardContent className="p-5">
-                      <div className="h-5 w-3/4 bg-muted rounded mb-3" />
-                      <div className="h-4 w-1/2 bg-muted rounded mb-2" />
-                      <div className="h-4 w-1/3 bg-muted rounded" />
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : recentTrips.length === 0 ? (
-              <Card className="border-dashed">
-                <CardContent className="py-12 text-center">
-                  <p className="text-muted-foreground mb-4">
-                    You haven't created any trips yet
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Use the search above to plan your first adventure!
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {recentTrips.map((trip, index) => (
-                  <motion.div
-                    key={trip.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.05 }}
-                  >
-                    <Link href={`/trip/${trip.id}`}>
-                      <Card className="h-full hover:border-primary/30 hover:shadow-md transition-all cursor-pointer group bg-white">
-                        <CardContent className="p-5">
-                          <div className="flex items-start justify-between mb-3">
-                            <h3 className="font-semibold line-clamp-1 group-hover:text-primary transition-colors">
-                              {trip.title}
-                            </h3>
-                            {trip.status === 'planning' && (
-                              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                                Planning
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="space-y-2 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4 shrink-0" />
-                              <span className="truncate">
-                                {getDestinationText(trip.trip_destinations)}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4 shrink-0" />
-                              <span>
-                                {format(new Date(trip.start_date), 'MMM d')} - {format(new Date(trip.end_date), 'MMM d, yyyy')}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center justify-between pt-1">
-                              <div className="flex items-center gap-2">
-                                <Users className="h-4 w-4" />
-                                <span>{trip.travelers_count} traveler{trip.travelers_count !== 1 ? 's' : ''}</span>
-                              </div>
-                              <span className="text-xs">
-                                {getTripDuration(trip.start_date, trip.end_date)}
-                              </span>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
-      </div>
+          </AnimatePresence>
+        </motion.div>
+      </main>
     </div>
   )
 }

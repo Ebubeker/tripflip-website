@@ -41,7 +41,7 @@ export function WhyChooseUsSection() {
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
                 whileHover={{ y: -5 }}
-                className="p-6 rounded-2xl bg-gradient-to-br from-[#f5f1eb] to-white border border-[#e8e4dd] text-center hover:shadow-lg transition-all"
+                className="p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-white border border-slate-200 text-center hover:shadow-lg transition-all"
               >
                 <div className="mb-4 transform hover:scale-110 transition-transform flex justify-center">
                   <IconComponent weight="duotone" className="w-10 h-10 text-primary" />

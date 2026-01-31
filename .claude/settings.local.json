@@ -22,7 +22,13 @@
       "Bash(git remote add:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(wsl bash -c \"cd /home/ebubeker/tripflip && npm run dev\")",
+      "Bash(wsl bash -c \"pkill -f ''next dev'' && sleep 2\")",
+      "Bash(wsl bash -c \"cd /home/ebubeker/tripflip && grep -n ''text-white'' src/app/trip/[tripId]/page.tsx | head -20\")",
+      "Bash(wsl bash -c \"cd /home/ebubeker/tripflip && grep -A 2 -B 2 ''Overview\\\\|Itinerary'' src/app/trip/[tripId]/page.tsx | grep TabsTrigger\")",
+      "Bash(git commit:*)",
+      "Bash(git push)"
     ]
   }
 }

@@ -49,7 +49,7 @@ export function PricingSection() {
 
   return (
     <>
-      <section id="pricing" className="py-40 bg-[#f5f1eb]">
+      <section id="pricing" className="py-40 bg-slate-50">
         <div className="container mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -111,7 +111,7 @@ export function PricingSection() {
                   className={`relative p-8 rounded-2xl flex flex-col ${
                     tier.highlighted
                       ? 'bg-primary text-white ring-4 ring-primary/20 scale-105 shadow-xl shadow-primary/30'
-                      : 'bg-white border-2 border-[#e8e4dd]'
+                      : 'bg-white border-2 border-slate-200'
                   }`}
                 >
                   {tier.highlighted && (

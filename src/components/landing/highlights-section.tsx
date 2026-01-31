@@ -42,7 +42,7 @@ export function HighlightsSection() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="group p-6 rounded-2xl border-2 border-[#e8e4dd] hover:border-primary/50 hover:shadow-lg transition-all duration-300 bg-white"
+                className="group p-6 rounded-2xl border-2 border-slate-200 hover:border-primary/50 hover:shadow-lg transition-all duration-300 bg-white"
               >
                 <div className="mb-4 transform group-hover:scale-110 transition-transform">
                   <IconComponent weight="duotone" className="w-12 h-12 text-primary" />
