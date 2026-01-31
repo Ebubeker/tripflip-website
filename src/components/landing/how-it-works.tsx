@@ -17,7 +17,7 @@ const STEP_WEIGHTS: ('bold' | 'fill')[] = ['bold', 'bold', 'bold', 'fill']
 
 export function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="py-40 bg-[#f5f1eb]">
+    <section id="how-it-works" className="py-40 bg-slate-50">
       <div className="container mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

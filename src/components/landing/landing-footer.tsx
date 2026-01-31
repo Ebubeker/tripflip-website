@@ -1,20 +1,30 @@
 'use client'
 
 import Link from 'next/link'
-import { AirplaneTilt, Heart } from '@phosphor-icons/react'
+import { Heart } from '@phosphor-icons/react'
 
 export function LandingFooter() {
   return (
-    <footer className="py-20 bg-[#f5f1eb] border-t border-[#e8e4dd]">
+    <footer className="py-20 bg-slate-50 border-t border-slate-200">
       <div className="container mx-auto px-4">
         <div className="grid md:grid-cols-4 gap-8 mb-8">
           {/* Brand */}
           <div>
             <Link href="/" className="flex items-center gap-2 mb-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                <AirplaneTilt weight="fill" className="h-5 w-5 text-white" />
+              <div className="relative w-8 h-8">
+                <img
+                  src="/tripflip_logo.png"
+                  alt="TripFlip"
+                  className="w-full h-full object-contain"
+                />
               </div>
-              <span className="text-xl font-bold text-gray-900">TripFlip</span>
+              <div className="relative h-4">
+                <img
+                  src="/logo_text.png"
+                  alt="TripFlip"
+                  className="h-full object-contain"
+                />
+              </div>
             </Link>
             <p className="text-gray-600 text-sm">
               AI-powered travel planning made simple. Plan your dream trip in seconds.
@@ -88,7 +98,7 @@ export function LandingFooter() {
           </div>
         </div>
 
-        <div className="border-t border-[#e8e4dd] pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="border-t border-slate-200 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-gray-500 text-sm">
             © {new Date().getFullYear()} TripFlip. All rights reserved.
           </p>

@@ -56,7 +56,7 @@ export function WaitlistSection() {
   }
 
   return (
-    <section className="py-40 bg-gradient-to-b from-white to-[#f5f1eb]">
+    <section className="py-40 bg-gradient-to-b from-white to-slate-50">
       <div className="container mx-auto px-4">
         <div className="max-w-4xl mx-auto">
           <motion.div
@@ -68,7 +68,7 @@ export function WaitlistSection() {
             {/* Background decoration */}
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 rounded-3xl transform -rotate-1" />
 
-            <div className="relative bg-white rounded-3xl p-8 md:p-12 shadow-xl border border-[#e8e4dd]">
+            <div className="relative bg-white rounded-3xl p-8 md:p-12 shadow-xl border border-slate-200">
               {!isSubmitted ? (
                 <>
                   {/* Header */}
@@ -101,7 +101,7 @@ export function WaitlistSection() {
                           whileInView={{ opacity: 1, y: 0 }}
                           viewport={{ once: true }}
                           transition={{ delay: 0.2 + i * 0.1 }}
-                          className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#f5f1eb] border border-[#e8e4dd]"
+                          className="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-50 border border-slate-200"
                         >
                           <IconComponent weight="duotone" className="w-4 h-4 text-primary" />
                           <span className="text-sm text-gray-700">{benefit.text}</span>
