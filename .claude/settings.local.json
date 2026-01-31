@@ -20,7 +20,9 @@
       "WebFetch(domain:tripflip.site)",
       "WebFetch(domain:docs.whop.com)",
       "Bash(git remote add:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }
