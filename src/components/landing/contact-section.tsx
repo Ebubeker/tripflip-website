@@ -177,7 +177,7 @@ export function ContactSection() {
                 </Button>
               </form>
 
-              <div className="mt-6 pt-6 border-t border-slate-200 text-center">
+              {/* <div className="mt-6 pt-6 border-t border-slate-200 text-center">
                 <p className="text-sm text-gray-500 flex items-center justify-center gap-2">
                   <EnvelopeSimple weight="duotone" className="w-4 h-4" />
                   Or email us directly at{' '}
@@ -185,7 +185,7 @@ export function ContactSection() {
                     hello@tripflip.app
                   </a>
                 </p>
-              </div>
+              </div> */}
             </motion.div>
           ) : (
             <motion.div
