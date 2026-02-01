@@ -305,13 +305,14 @@ export async function POST(request: NextRequest) {
           roomQuantity: Math.ceil(travelers / 2).toString(),
         })
 
-        console.log('Hotel offers found:', hotelOffers.data?.length || 0)
-        
-        if (hotelOffers.data && hotelOffers.data.length > 0) {
+        const hotelData = hotelOffers.data as any[]
+        console.log('Hotel offers found:', hotelData?.length || 0)
+
+        if (hotelData && hotelData.length > 0) {
           // Log first hotel structure for debugging
-          console.log('First hotel structure:', JSON.stringify(hotelOffers.data[0], null, 2).slice(0, 500))
-          
-          selectedHotel = selectBestHotel(hotelOffers.data, budget)
+          console.log('First hotel structure:', JSON.stringify(hotelData[0], null, 2).slice(0, 500))
+
+          selectedHotel = selectBestHotel(hotelData, budget)
           if (selectedHotel) {
             hotelPrice = parseFloat(selectedHotel.offers?.[0]?.price?.total || '0')
             console.log('Selected hotel:', selectedHotel.hotel?.name, 'price:', hotelPrice)
@@ -329,12 +330,27 @@ export async function POST(request: NextRequest) {
     // Step 5: Search POIs using Google Places
     let places: any[] = []
     try {
-      const placesResult = await searchPlacesForTrip(
-        destAnalysis.cities[0],
-        destAnalysis.searchRadius,
-        ['tourist_attraction', 'museum', 'restaurant', 'park', 'landmark']
-      )
-      places = placesResult.places || []
+      // Get coordinates for the destination
+      const destCoordinates = destinationAirport?.airportCode
+        ? getAirportCoordinates(destinationAirport.airportCode)
+        : null
+
+      if (destCoordinates && destCoordinates.lat !== 0 && destCoordinates.lng !== 0) {
+        const placesResult = await searchPlacesForTrip(
+          destAnalysis.cities[0],
+          { latitude: destCoordinates.lat, longitude: destCoordinates.lng },
+          ['tourist_attraction', 'museum', 'restaurant', 'park', 'landmark']
+        )
+        // Combine all place types into a single array
+        places = [
+          ...placesResult.attractions,
+          ...placesResult.restaurants,
+          ...placesResult.museums,
+          ...placesResult.parks,
+        ]
+      } else {
+        console.warn('Could not get coordinates for destination, skipping places search')
+      }
     } catch (placesError) {
       console.error('Places search error:', placesError)
     }

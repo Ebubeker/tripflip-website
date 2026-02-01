@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
-import { Menu, User, LogOut, Map, Compass } from 'lucide-react'
+import { Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Sheet,
@@ -11,16 +11,7 @@ import {
   SheetTrigger,
   SheetTitle,
 } from '@/components/ui/sheet'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { createClient } from '@/lib/supabase/client'
-import type { User as SupabaseUser } from '@supabase/supabase-js'
+import { WaitlistModal } from '@/components/landing/waitlist-modal'
 
 interface NavbarProps {
   variant?: 'default' | 'landing' | 'hero'
@@ -29,37 +20,10 @@ interface NavbarProps {
 export function Navbar({ variant = 'default' }: NavbarProps) {
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
-  const [user, setUser] = useState<SupabaseUser | null>(null)
-  const supabase = createClient()
+  const [isWaitlistOpen, setIsWaitlistOpen] = useState(false)
 
   const isLanding = variant === 'landing'
   const isHero = variant === 'hero'
-
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
-    }
-    getUser()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-    })
-
-    return () => subscription.unsubscribe()
-  }, [supabase])
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    window.location.href = '/'
-  }
-
-  const getUserInitials = () => {
-    if (!user?.email) return 'U'
-    return user.email.charAt(0).toUpperCase()
-  }
-
-  const isAuthPage = pathname?.startsWith('/login') || pathname?.startsWith('/register')
 
   return (
     <header className={`sticky top-0 z-50 w-full ${
@@ -100,89 +64,13 @@ export function Navbar({ variant = 'default' }: NavbarProps) {
             </>
           )}
 
-          {/* Explore link - always visible */}
-          <Button variant="ghost" size="sm" asChild className={isHero ? 'text-white/90 hover:text-white hover:bg-white/10' : 'text-gray-600 hover:text-gray-900'}>
-            <Link href="/explore">
-              <Compass className="h-4 w-4 mr-2" />
-              Explore
-            </Link>
+          <Button
+            onClick={() => setIsWaitlistOpen(true)}
+            size="sm"
+            className={isHero ? 'bg-orange-500 text-white hover:bg-orange-600 border-0' : 'bg-orange-500 text-white hover:bg-orange-600'}
+          >
+            Join Waitlist
           </Button>
-
-          {/* User-specific links */}
-          {user && (
-            <>
-              <Button variant="ghost" size="sm" asChild className={isHero ? 'text-white/90 hover:text-white hover:bg-white/10' : 'text-gray-600 hover:text-gray-900'}>
-                <Link href="/plan">
-                  Plan Trip
-                </Link>
-              </Button>
-              <Button variant="ghost" size="sm" asChild className={isHero ? 'text-white/90 hover:text-white hover:bg-white/10' : 'text-gray-600 hover:text-gray-900'}>
-                <Link href="/trips">
-                  <Map className="h-4 w-4 mr-2" />
-                  My Trips
-                </Link>
-              </Button>
-            </>
-          )}
-
-          {user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className={`relative h-9 w-9 rounded-full ${isHero ? 'hover:bg-white/10' : 'hover:bg-gray-100'}`}>
-                  <Avatar className="h-9 w-9">
-                    <AvatarFallback className={isHero ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-600'}>
-                      {getUserInitials()}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <div className="flex items-center gap-2 p-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                      {getUserInitials()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col">
-                    <p className="text-sm font-medium truncate">{user.email}</p>
-                  </div>
-                </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/plan" className="cursor-pointer">
-                    <Compass className="mr-2 h-4 w-4" />
-                    Plan Trip
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/trips" className="cursor-pointer">
-                    <Map className="mr-2 h-4 w-4" />
-                    My Trips
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/profile" className="cursor-pointer">
-                    <User className="mr-2 h-4 w-4" />
-                    Profile
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive">
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sign Out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : !isAuthPage && (
-            <>
-              <Button variant="ghost" size="sm" asChild className={isHero ? 'text-white/90 hover:text-white hover:bg-white/10' : 'text-gray-600 hover:text-gray-900'}>
-                <Link href="/login">Sign In</Link>
-              </Button>
-              <Button size="sm" asChild className={isHero ? 'bg-orange-500 text-white hover:bg-orange-600 border-0' : 'bg-orange-500 text-white hover:bg-orange-600'}>
-                <Link href="/plan">Get Started</Link>
-              </Button>
-            </>
-          )}
         </div>
 
         {/* Mobile Menu */}
@@ -244,73 +132,24 @@ export function Navbar({ variant = 'default' }: NavbarProps) {
                   </nav>
                 )}
 
-                {user ? (
-                  <nav className="flex flex-col gap-4">
-                    <div className="flex items-center gap-3 p-3 rounded-lg bg-muted">
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback className="bg-primary/10 text-primary">
-                          {getUserInitials()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-sm font-medium truncate max-w-[180px]">{user.email}</p>
-                      </div>
-                    </div>
-                    <Link
-                      href="/plan"
-                      onClick={() => setIsOpen(false)}
-                      className="flex items-center gap-3 text-lg font-medium"
-                    >
-                      <Compass className="h-5 w-5 text-primary" />
-                      Plan Trip
-                    </Link>
-                    <Link
-                      href="/trips"
-                      onClick={() => setIsOpen(false)}
-                      className="flex items-center gap-3 text-lg font-medium"
-                    >
-                      <Map className="h-5 w-5 text-primary" />
-                      My Trips
-                    </Link>
-                    <Link
-                      href="/profile"
-                      onClick={() => setIsOpen(false)}
-                      className="flex items-center gap-3 text-lg font-medium"
-                    >
-                      <User className="h-5 w-5 text-primary" />
-                      Profile
-                    </Link>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        handleSignOut()
-                        setIsOpen(false)
-                      }}
-                      className="mt-4"
-                    >
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Sign Out
-                    </Button>
-                  </nav>
-                ) : (
-                  <div className="flex flex-col gap-3 pt-4">
-                    <Button variant="outline" asChild className="w-full">
-                      <Link href="/login" onClick={() => setIsOpen(false)}>
-                        Sign In
-                      </Link>
-                    </Button>
-                    <Button asChild className="w-full">
-                      <Link href="/plan" onClick={() => setIsOpen(false)}>
-                        Start Planning
-                      </Link>
-                    </Button>
-                  </div>
-                )}
+                <div className="flex flex-col gap-3 pt-4">
+                  <Button
+                    onClick={() => {
+                      setIsOpen(false)
+                      setIsWaitlistOpen(true)
+                    }}
+                    className="w-full"
+                  >
+                    Join Waitlist
+                  </Button>
+                </div>
               </div>
             </SheetContent>
           </Sheet>
         </div>
       </nav>
+
+      <WaitlistModal isOpen={isWaitlistOpen} onClose={() => setIsWaitlistOpen(false)} />
     </header>
   )
 }

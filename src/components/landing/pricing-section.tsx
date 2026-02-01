@@ -26,8 +26,8 @@ export function PricingSection() {
     const planId = isYearly ? tier.whopPlanId.yearly : tier.whopPlanId.monthly
 
     if (!planId) {
-      // Free plan - redirect to app
-      window.location.href = '/plan'
+      // Free plan - show waitlist for now
+      alert('Free plan coming soon! Join our waitlist to be notified.')
       return
     }
 

@@ -1,9 +1,12 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { Heart } from '@phosphor-icons/react'
+import { WaitlistModal } from './waitlist-modal'
 
 export function LandingFooter() {
+  const [isWaitlistOpen, setIsWaitlistOpen] = useState(false)
   return (
     <footer className="py-20 bg-slate-50 border-t border-slate-200">
       <div className="container mx-auto px-4">
@@ -36,9 +39,12 @@ export function LandingFooter() {
             <h4 className="font-semibold text-gray-900 mb-4">Product</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/plan" className="text-gray-600 hover:text-primary transition-colors">
-                  Plan a Trip
-                </Link>
+                <button
+                  onClick={() => setIsWaitlistOpen(true)}
+                  className="text-gray-600 hover:text-primary transition-colors"
+                >
+                  Join Waitlist
+                </button>
               </li>
               <li>
                 <Link href="/#pricing" className="text-gray-600 hover:text-primary transition-colors">
@@ -107,6 +113,8 @@ export function LandingFooter() {
           </p>
         </div>
       </div>
+
+      <WaitlistModal isOpen={isWaitlistOpen} onClose={() => setIsWaitlistOpen(false)} />
     </footer>
   )
 }

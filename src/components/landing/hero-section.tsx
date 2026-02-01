@@ -1,13 +1,15 @@
 'use client'
 
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { ArrowRight } from 'lucide-react'
-import Link from 'next/link'
 import { FloatingPlanes } from './floating-planes'
+import { WaitlistModal } from './waitlist-modal'
 import { AirplaneTakeoff, MapPinLine, Calendar } from '@phosphor-icons/react'
 
 export function HeroSection() {
+  const [isWaitlistOpen, setIsWaitlistOpen] = useState(false)
   return (
     <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-gradient-to-b from-sky-50 via-white to-white">
       <FloatingPlanes />
@@ -130,16 +132,24 @@ export function HeroSection() {
           transition={{ duration: 0.6, delay: 0.4 }}
           className="flex flex-col sm:flex-row gap-4 justify-center"
         >
-          <Button asChild size="lg" className="text-lg px-10 py-7 rounded-xl bg-orange-500 hover:bg-orange-600 text-white shadow-xl shadow-orange-500/30 hover:shadow-2xl hover:shadow-orange-500/40 transition-all duration-300 hover:-translate-y-0.5">
-            <Link href="/plan">
-              Start Planning Free
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Link>
+          <Button
+            onClick={() => setIsWaitlistOpen(true)}
+            size="lg"
+            className="text-lg px-10 py-7 rounded-xl bg-orange-500 hover:bg-orange-600 text-white shadow-xl shadow-orange-500/30 hover:shadow-2xl hover:shadow-orange-500/40 transition-all duration-300 hover:-translate-y-0.5"
+          >
+            Join Waitlist
+            <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
-          <Button asChild variant="ghost" size="lg" className="text-lg px-8 py-7 rounded-xl bg-white/80 hover:bg-white text-sky-600 border-2 border-sky-200 hover:border-sky-400 transition-all">
-            <Link href="#how-it-works">
-              See How It Works
-            </Link>
+          <Button
+            onClick={() => {
+              const element = document.getElementById('how-it-works')
+              element?.scrollIntoView({ behavior: 'smooth' })
+            }}
+            variant="ghost"
+            size="lg"
+            className="text-lg px-8 py-7 rounded-xl bg-white/80 hover:bg-white text-sky-600 border-2 border-sky-200 hover:border-sky-400 transition-all"
+          >
+            See How It Works
           </Button>
         </motion.div>
 
@@ -150,9 +160,11 @@ export function HeroSection() {
           transition={{ duration: 0.6, delay: 0.6 }}
           className="mt-10 text-sm text-gray-500"
         >
-          No credit card required • Start planning in 30 seconds
+          Be the first to know when we launch • Exclusive early access
         </motion.p>
       </div>
+
+      <WaitlistModal isOpen={isWaitlistOpen} onClose={() => setIsWaitlistOpen(false)} />
     </section>
   )
 }

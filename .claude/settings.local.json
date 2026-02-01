@@ -28,7 +28,9 @@
       "Bash(wsl bash -c \"cd /home/ebubeker/tripflip && grep -n ''text-white'' src/app/trip/[tripId]/page.tsx | head -20\")",
       "Bash(wsl bash -c \"cd /home/ebubeker/tripflip && grep -A 2 -B 2 ''Overview\\\\|Itinerary'' src/app/trip/[tripId]/page.tsx | grep TabsTrigger\")",
       "Bash(git commit:*)",
-      "Bash(git push)"
+      "Bash(git push)",
+      "Bash(netstat:*)",
+      "Bash(taskkill:*)"
     ]
   }
 }
