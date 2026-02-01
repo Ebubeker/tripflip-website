@@ -67,8 +67,10 @@ export function WhopCheckoutModal({
 
   const handleComplete = (paymentId: string) => {
     console.log('Payment completed:', paymentId)
-    // Redirect to success page
-    window.location.href = '/dashboard?payment=success'
+    // Close modal and show success message on landing page
+    onClose()
+    // Show a success notification or reload the page
+    window.location.href = '/?payment=success'
   }
 
   if (!planId) return null
@@ -131,7 +133,7 @@ export function WhopCheckoutModal({
                   <div className="overflow-y-auto max-h-[85vh]">
                     <WhopCheckoutEmbed
                       sessionId={sessionId}
-                      returnUrl={`${window.location.origin}/dashboard?payment=success`}
+                      returnUrl={`${window.location.origin}/?payment=success`}
                       onComplete={handleComplete}
                     />
                   </div>
